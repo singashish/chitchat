@@ -1,6 +1,59 @@
 #include <iostream>
+#include <thread>
 #include <string>
 #include <socket_utils.h>
+#include <atomic>
+
+std::atomic<bool> exit_flag(false);
+
+void send_message_to_server(int socket) {
+    std::string uname;
+    std::cout << "Enter your name: ";
+    std::getline(std::cin, uname);
+
+    std::cout << "(type 'exit' to close.)\n";
+    std::string msg;
+    while (true) {
+        std::getline(std::cin, msg);
+
+        std::string full_msg = uname + ": " + msg;
+
+        if (msg == "exit") {
+            break;
+        }
+
+        // Send data to the server
+        ssize_t msg_sent_size = send(socket, full_msg.c_str(), full_msg.size(), 0);
+
+        if (msg_sent_size < 0) {
+            std::cerr << "Error sending data: " << strerror(errno) << "\n";
+            break;
+        }
+    }
+
+    // Set the exit flag
+    exit_flag = true;
+}
+
+void print_messages(int socket) {
+    char buffer[1024];
+
+    while (!exit_flag) {
+        ssize_t received_msg_size = recv(socket, buffer, 1024, 0);
+
+        if (received_msg_size > 0) {
+            buffer[received_msg_size] = 0;
+            std::cout << buffer << "\n";
+        }
+
+        if (received_msg_size == 0) {
+            break;
+        }
+    }
+
+    // Close the socket
+    close_socket(socket);
+}
 
 int main() {
 #ifdef _WIN32
@@ -37,8 +90,9 @@ int main() {
     } else {
         std::cerr << "Error connecting to the server: " << strerror(errno) << "\n";
 
-        // Close the socket
+        // Close the socket and deallocate memory
         close_socket(client_socket);
+        delete client_address;
 
 #ifdef _WIN32
         WSACleanup();
@@ -46,27 +100,17 @@ int main() {
         return 1;
     }
 
-    std::cout << "(type 'exit' to close.)\n";
+    // Create a thread for printing messages
+    std::thread print_thread(print_messages, client_socket);
 
-    std::string line;
-    while (true) {
-        std::getline(std::cin, line);
+    send_message_to_server(client_socket);
 
-        if (line == "exit") {
-            break;
-        }
-
-        // Send data to the server
-        ssize_t amount_sent = send(client_socket, line.c_str(), line.size(), 0);
-
-        if (amount_sent < 0) {
-            std::cerr << "Error sending data: " << strerror(errno) << "\n";
-            break;
-        }
-    }
-
-    // Close the socket
+    // Close the socket and deallocate memory
     close_socket(client_socket);
+    delete client_address;
+
+    // Wait for the print thread to finish
+    print_thread.join();
 
 #ifdef _WIN32
     WSACleanup();
