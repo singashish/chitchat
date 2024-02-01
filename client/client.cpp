@@ -2,6 +2,7 @@
 #include <thread>
 #include <string>
 #include <socket_utils.h>
+#include <memory>
 #include <atomic>
 
 std::atomic<bool> exit_flag(false);
@@ -80,19 +81,18 @@ int main() {
     int server_port = 2000;
 
     // Set up the client address structure
-    sockaddr_in *client_address = create_IPV4_address(server_ip.c_str(), server_port);
+    std::unique_ptr<sockaddr_in> client_address(create_IPV4_address(server_ip.c_str(), server_port));
 
     // Connect to the server
-    int result = connect(client_socket, reinterpret_cast<sockaddr*>(client_address), sizeof(*client_address));
+    int result = connect(client_socket, reinterpret_cast<sockaddr*>(client_address.get()), sizeof(*client_address));
 
     if (result == 0) {
         std::cout << "Connected to the server!\n";
     } else {
         std::cerr << "Error connecting to the server: " << strerror(errno) << "\n";
 
-        // Close the socket and deallocate memory
+        // Close the socket
         close_socket(client_socket);
-        delete client_address;
 
 #ifdef _WIN32
         WSACleanup();
@@ -105,9 +105,8 @@ int main() {
 
     send_message_to_server(client_socket);
 
-    // Close the socket and deallocate memory
+    // Close the socket
     close_socket(client_socket);
-    delete client_address;
 
     // Wait for the print thread to finish
     print_thread.join();

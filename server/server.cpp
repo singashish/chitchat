@@ -5,9 +5,12 @@
 #include <unistd.h>
 #include <socket_utils.h>
 #include <mutex>
+#include <memory>
+#include <atomic>
 
 std::vector<int> accepted_sockets;
 std::mutex accepted_sockets_mutex;
+std::atomic<bool> exit_flag(false);
 
 void broadcast_messages_to_clients(char *buffer, int sender_socket) {
     std::lock_guard<std::mutex> lock(accepted_sockets_mutex);
@@ -21,7 +24,7 @@ void broadcast_messages_to_clients(char *buffer, int sender_socket) {
 
 void receive_and_print_incoming_data(int client_socket) {
     char buffer[1024];
-    while (true) {
+    while (!exit_flag) {
         ssize_t amount_received = recv(client_socket, buffer, 1024, 0);
 
         if (amount_received > 0) {
@@ -50,9 +53,9 @@ void receive_and_print_incoming_data(int client_socket) {
 }
 
 void incoming_connection(int server_socket) {
-    while (true) {
+    while (!exit_flag) {
         sockaddr_in client_address;
-        int client_address_size = sizeof(sockaddr_in);
+        socklen_t client_address_size = sizeof(sockaddr_in);
         int client_socket = accept(server_socket, reinterpret_cast<sockaddr*>(&client_address), &client_address_size);
 
         if (client_socket > 0) {
@@ -110,18 +113,7 @@ int main() {
     std::cin.ignore();
 
     // Signal threads to finish and wait for them to complete
-    {
-        std::lock_guard<std::mutex> lock(accepted_sockets_mutex);
-        for (int client_socket : accepted_sockets) {
-#ifdef _WIN32
-            shutdown(client_socket, SD_BOTH);
-#else
-            shutdown(client_socket, SHUT_RDWR);
-#endif
-            close_socket(client_socket);
-        }
-        accepted_sockets.clear();
-    }
+    exit_flag = true;
 
     // Shutdown and close the server socket
 #ifdef _WIN32
