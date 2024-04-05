@@ -1,6 +1,5 @@
 #include <socket_utils.h>
 #include <iostream>
-#include <cstring>
 
 int create_TCPIPV4_socket() {
     return socket(AF_INET, SOCK_STREAM, 0);

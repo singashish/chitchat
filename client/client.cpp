@@ -12,14 +12,14 @@ void send_message_to_server(int socket) {
     std::cout << "Enter your name: ";
     std::getline(std::cin, uname);
 
-    std::cout << "(type 'exit' to close.)\n";
+    std::cout << "(type '/exit' to close.)\n";
     std::string msg;
     while (true) {
         std::getline(std::cin, msg);
 
         std::string full_msg = uname + ": " + msg;
 
-        if (msg == "exit") {
+        if (msg == "/exit") {
             break;
         }
 
