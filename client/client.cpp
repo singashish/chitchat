@@ -77,14 +77,14 @@ int main() {
     }
 
     // Server information
-    std::string server_ip = "127.0.0.1";
+    std::string server_ip = "192.168.1.223";
     int server_port = 2000;
 
     // Set up the client address structure
-    std::unique_ptr<sockaddr_in> client_address(create_IPV4_address(server_ip.c_str(), server_port));
+    std::unique_ptr<sockaddr_in> address(create_IPV4_address(server_ip.c_str(), server_port));
 
     // Connect to the server
-    int result = connect(client_socket, reinterpret_cast<sockaddr*>(client_address.get()), sizeof(*client_address));
+    int result = connect(client_socket, reinterpret_cast<sockaddr*>(address.get()), sizeof(*address));
 
     if (result == 0) {
         std::cout << "Connected to the server!\n";

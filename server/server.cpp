@@ -90,7 +90,8 @@ int main() {
     }
 
     // Set up the server address structure
-    sockaddr_in* server_address = create_IPV4_address("", 2000);
+    std::string server_ip = "192.168.1.223";
+    sockaddr_in* server_address = create_IPV4_address(server_ip.c_str(), 2000);
 
     int result = bind(server_socket, reinterpret_cast<sockaddr*>(server_address), sizeof(*server_address));
 
